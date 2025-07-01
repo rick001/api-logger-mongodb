@@ -11,7 +11,7 @@ export class ApiLogger implements ApiLoggerInstance {
   private client: MongoClient | null = null;
   private db: Db | null = null;
   private collection: Collection | null = null;
-  private options: Required<ApiLoggerOptions>;
+  private options: ApiLoggerOptions;
 
   constructor(options: ApiLoggerOptions) {
     this.options = {
@@ -24,7 +24,7 @@ export class ApiLogger implements ApiLoggerInstance {
       logHeaders: options.logHeaders !== false,
       logQuery: options.logQuery !== false,
       logParams: options.logParams !== false,
-      getUserInfo: options.getUserInfo,
+      getUserInfo: options.getUserInfo || (() => undefined),
       includeRoutes: options.includeRoutes || [],
       excludeRoutes: options.excludeRoutes || [],
       includeMethods: options.includeMethods || [],
@@ -32,8 +32,8 @@ export class ApiLogger implements ApiLoggerInstance {
       minStatusCode: options.minStatusCode ?? 0,
       maxStatusCode: options.maxStatusCode ?? 999,
       logErrorsOnly: options.logErrorsOnly || false,
-      shouldLog: options.shouldLog,
-      transformLog: options.transformLog
+      shouldLog: options.shouldLog || (() => true),
+      transformLog: options.transformLog || ((entry) => entry)
     };
   }
 
@@ -45,8 +45,8 @@ export class ApiLogger implements ApiLoggerInstance {
       this.client = new MongoClient(this.options.mongoUri);
       await this.client.connect();
       
-      this.db = this.client.db(this.options.databaseName);
-      this.collection = this.db.collection(this.options.collectionName);
+      this.db = this.client.db(this.options.databaseName!);
+      this.collection = this.db.collection(this.options.collectionName!);
       
       // Create indexes for better query performance
       await this.collection.createIndex({ createdAt: -1 });
@@ -68,6 +68,9 @@ export class ApiLogger implements ApiLoggerInstance {
   async log(req: Request, res: Response, startTime: number): Promise<void> {
     try {
       // Check if request should be logged
+      if (this.options.shouldLog && !this.options.shouldLog(req, res)) {
+        return;
+      }
       if (!shouldLogRequest(req, res, this.options)) {
         return;
       }
@@ -89,11 +92,11 @@ export class ApiLogger implements ApiLoggerInstance {
           statusCode: res.statusCode,
           body: this.options.logResponseBody ? this.getResponseBody(res) : undefined
         },
-        user: extractUserInfo(req, this.options.getUserInfo),
+        user: this.options.getUserInfo ? extractUserInfo(req, this.options.getUserInfo) : undefined,
         createdAt: new Date(),
         durationMs,
-        ip: getClientIP(req),
-        userAgent: getUserAgent(req)
+        ip: getClientIP(req) || undefined,
+        userAgent: getUserAgent(req) || undefined
       };
 
       // Apply custom transformation if provided
@@ -127,7 +130,7 @@ export class ApiLogger implements ApiLoggerInstance {
   private maskHeaders(headers: any): Record<string, string> {
     if (!this.options.logHeaders) return {};
     
-    const maskedHeaders = maskRequestData({ headers }, this.options.maskFields);
+    const maskedHeaders = maskRequestData({ headers }, this.options.maskFields || []);
     return maskedHeaders.headers || {};
   }
 
@@ -137,7 +140,7 @@ export class ApiLogger implements ApiLoggerInstance {
   private maskBody(body: any): any {
     if (!this.options.logRequestBody) return {};
     
-    return maskRequestData({ body }, this.options.maskFields).body || {};
+    return maskRequestData({ body }, this.options.maskFields || []).body || {};
   }
 
   /**
@@ -146,7 +149,7 @@ export class ApiLogger implements ApiLoggerInstance {
   private maskQuery(query: any): Record<string, any> {
     if (!this.options.logQuery) return {};
     
-    const maskedQuery = maskRequestData({ query }, this.options.maskFields);
+    const maskedQuery = maskRequestData({ query }, this.options.maskFields || []);
     return maskedQuery.query || {};
   }
 
@@ -156,7 +159,7 @@ export class ApiLogger implements ApiLoggerInstance {
   private maskParams(params: any): Record<string, any> {
     if (!this.options.logParams) return {};
     
-    const maskedParams = maskRequestData({ params }, this.options.maskFields);
+    const maskedParams = maskRequestData({ params }, this.options.maskFields || []);
     return maskedParams.params || {};
   }
 
@@ -170,7 +173,7 @@ export class ApiLogger implements ApiLoggerInstance {
     const responseBody = (res as any).body || (res as any).data || (res as any).payload;
     
     if (responseBody) {
-      return maskResponseData(responseBody, this.options.maskFields);
+      return maskResponseData(responseBody, this.options.maskFields || []);
     }
     
     return undefined;

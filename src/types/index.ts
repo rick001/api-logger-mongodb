@@ -20,8 +20,8 @@ export interface ApiLogEntry {
   };
   createdAt: Date;
   durationMs: number;
-  ip?: string;
-  userAgent?: string;
+  ip?: string | undefined;
+  userAgent?: string | undefined;
 }
 
 export interface ApiLoggerOptions {
@@ -72,10 +72,4 @@ export interface ApiLoggerInstance {
   log(req: Request, res: Response, startTime: number): Promise<void>;
   /** Close MongoDB connection */
   close(): Promise<void>;
-}
-
-export interface MaskedRequest extends Request {
-  body?: any;
-  query?: any;
-  params?: any;
 } 
