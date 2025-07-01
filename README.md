@@ -46,6 +46,37 @@ app.use(apiLoggerExpress({
 app.listen(3000);
 ```
 
+## Usage (NestJS)
+```ts
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { createApiLoggerMiddleware } from 'api-logger-mongodb';
+
+@Module({
+  // ... your modules
+})
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(createApiLoggerMiddleware({
+        mongoUri: 'mongodb://localhost:27017',
+        databaseName: 'my_nestjs_logs',
+        collectionName: 'api_audit',
+        maskFields: ['password', 'token'],
+        logResponseBody: true,
+        logRequestBody: true,
+        getUserInfo: (req) => {
+          return req.user ? {
+            id: req.user.id,
+            email: req.user.email,
+            role: req.user.role
+          } : undefined;
+        }
+      }))
+      .forRoutes('*'); // Apply to all routes
+  }
+}
+```
+
 ## Options
 | Option            | Type            | Description |
 |-------------------|----------------|-------------|
