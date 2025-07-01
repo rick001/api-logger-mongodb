@@ -10,8 +10,17 @@ A comprehensive API logging middleware for Node.js applications (Express, NestJS
 - TypeScript support
 
 ## Installation
+
+Install directly from GitHub:
+
 ```bash
-npm install api-logger-mongodb
+npm install git+https://github.com/rick001/api-logger-mongodb.git
+```
+
+Or, with yarn:
+
+```bash
+yarn add git+https://github.com/rick001/api-logger-mongodb.git
 ```
 
 ## Usage (Express)
