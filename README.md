@@ -74,11 +74,14 @@ export class AppModule implements NestModule {
         logResponseBody: true,
         logRequestBody: true,
         getUserInfo: (req) => {
-          return req.user ? {
-            id: req.user.id,
-            email: req.user.email,
-            role: req.user.role
-          } : undefined;
+          const user = (req as any).user;
+          return user
+            ? {
+                id: user.id,
+                email: user.email,
+                role: user.role,
+              }
+            : undefined;
         }
       }))
       .forRoutes('*'); // Apply to all routes
