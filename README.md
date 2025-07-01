@@ -3,11 +3,15 @@
 A comprehensive API logging middleware for Node.js applications (Express, NestJS, etc.) that logs requests and responses to MongoDB for auditing and debugging.
 
 ## Features
-- Logs API URL, method, request/response data, status, user info, timestamps, and duration
-- Mask sensitive fields (e.g., password, token)
-- Configurable via options (MongoDB URI, collection, etc.)
-- Express middleware (NestJS module coming soon)
-- TypeScript support
+- ✅ Logs API URL, method, request/response data, status, user info, timestamps, and duration
+- ✅ Mask sensitive fields (e.g., password, token)
+- ✅ Configurable via options (MongoDB URI, collection, etc.)
+- ✅ Express middleware support
+- ✅ NestJS middleware support
+- ✅ TypeScript support
+- ✅ Filter by routes, methods, status codes
+- ✅ Custom user info extraction
+- ✅ Response body logging (configurable)
 
 ## Installation
 
@@ -23,7 +27,9 @@ Or, with yarn:
 yarn add git+https://github.com/rick001/api-logger-mongodb.git
 ```
 
-## Usage (Express)
+## Quick Start
+
+### Express.js
 ```ts
 import express from 'express';
 import { apiLoggerExpress } from 'api-logger-mongodb';
@@ -42,11 +48,14 @@ app.use(apiLoggerExpress({
 }));
 
 // ... your routes
+app.get('/api/users', (req, res) => {
+  res.json({ users: [] });
+});
 
 app.listen(3000);
 ```
 
-## Usage (NestJS)
+### NestJS
 ```ts
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { createApiLoggerMiddleware } from 'api-logger-mongodb';
@@ -74,6 +83,65 @@ export class AppModule implements NestModule {
       }))
       .forRoutes('*'); // Apply to all routes
   }
+}
+```
+
+## Advanced Usage Examples
+
+### Express - Filter by Routes and Methods
+```ts
+app.use(apiLoggerExpress({
+  mongoUri: 'mongodb://localhost:27017',
+  databaseName: 'my_logs',
+  collectionName: 'api_audit',
+  maskFields: ['password', 'token'],
+  // Only log specific routes
+  includeRoutes: [/^\/api\/users/, /^\/api\/orders/],
+  // Exclude health check routes
+  excludeRoutes: [/^\/health/, /^\/metrics/],
+  // Only log POST, PUT, DELETE methods
+  includeMethods: ['POST', 'PUT', 'DELETE'],
+  // Only log errors (status >= 400)
+  logErrorsOnly: true
+}));
+```
+
+### NestJS - Apply to Specific Routes
+```ts
+import { RequestMethod } from '@nestjs/common';
+
+configure(consumer: MiddlewareConsumer) {
+  consumer
+    .apply(createApiLoggerMiddleware({
+      mongoUri: 'mongodb://localhost:27017',
+      databaseName: 'my_nestjs_logs',
+      collectionName: 'api_audit',
+      maskFields: ['password', 'token'],
+      logResponseBody: true,
+      logRequestBody: true
+    }))
+    .forRoutes(
+      { path: 'api/users', method: RequestMethod.ALL },
+      { path: 'api/orders', method: RequestMethod.ALL },
+      { path: 'api/products', method: RequestMethod.ALL }
+    );
+}
+```
+
+### Custom User Info Extraction
+```ts
+getUserInfo: (req) => {
+  // Extract from JWT payload
+  const user = (req as any).user || (req as any).payload;
+  return user ? {
+    id: user.id || user.sub,
+    email: user.email,
+    role: user.role,
+    tenant: user.tenant
+  } : {
+    type: 'anonymous',
+    ip: req.ip
+  };
 }
 ```
 
@@ -124,6 +192,38 @@ export class AppModule implements NestModule {
   "ip": "127.0.0.1",
   "userAgent": "Mozilla/5.0 ..."
 }
+```
+
+## Querying Logs
+
+You can query your MongoDB collection to analyze API usage:
+
+```javascript
+// Find all failed requests
+db.api_audit.find({ "response.statusCode": { $gte: 400 } })
+
+// Find slow requests (>1 second)
+db.api_audit.find({ durationMs: { $gt: 1000 } })
+
+// Find requests by user
+db.api_audit.find({ "user.id": "1234" })
+
+// Find requests in the last hour
+db.api_audit.find({ 
+  createdAt: { $gte: new Date(Date.now() - 60*60*1000) } 
+})
+
+// Find requests by endpoint
+db.api_audit.find({ url: /\/api\/users/ })
+
+// Find requests by method
+db.api_audit.find({ method: "POST" })
+
+// Aggregate by endpoint usage
+db.api_audit.aggregate([
+  { $group: { _id: "$url", count: { $sum: 1 } } },
+  { $sort: { count: -1 } }
+])
 ```
 
 ## License
