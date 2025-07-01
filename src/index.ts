@@ -6,4 +6,5 @@ export {
   createApiLoggerModule,
   ApiLoggerNestMiddleware, 
   ApiLoggerModule 
-} from './middleware/nestjs'; 
+} from './middleware/nestjs';
+export { StandaloneApiLogger, createAxiosLogger } from './utils/standalone'; 

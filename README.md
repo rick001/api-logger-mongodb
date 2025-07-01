@@ -89,6 +89,61 @@ export class AppModule implements NestModule {
 }
 ```
 
+### Standalone (Axios, Fetch, etc.)
+```ts
+import axios from 'axios';
+import { StandaloneApiLogger, createAxiosLogger } from 'api-logger-mongodb';
+
+// Create logger instance
+const logger = new StandaloneApiLogger({
+  mongoUri: 'mongodb://localhost:27017',
+  databaseName: 'my_logs',
+  collectionName: 'api_audit',
+  maskFields: ['password', 'token'],
+  logResponseBody: true,
+  logRequestBody: true
+});
+
+// Initialize logger
+await logger.init();
+
+// Create axios interceptor for automatic logging
+const axiosLogger = createAxiosLogger(logger, () => ({
+  id: 'user123',
+  email: 'user@example.com'
+}));
+
+// Add interceptors to axios
+axios.interceptors.request.use(axiosLogger.request);
+axios.interceptors.response.use(axiosLogger.response, axiosLogger.error);
+
+// Now all axios calls will be automatically logged
+const response = await axios.get('https://api.example.com/users');
+const postResponse = await axios.post('https://api.example.com/users', {
+  name: 'John',
+  email: 'john@example.com'
+});
+
+// Manual logging (for fetch or other HTTP clients)
+await logger.logRequest(
+  'https://api.example.com/users',
+  'GET',
+  {
+    headers: { 'Authorization': 'Bearer token' },
+    query: { page: 1 }
+  },
+  {
+    statusCode: 200,
+    body: { users: [] }
+  },
+  { id: 'user123', email: 'user@example.com' },
+  150 // duration in ms
+);
+
+// Close connection when done
+await logger.close();
+```
+
 ## Advanced Usage Examples
 
 ### Express - Filter by Routes and Methods

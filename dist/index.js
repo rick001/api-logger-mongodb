@@ -14,7 +14,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ApiLoggerModule = exports.ApiLoggerNestMiddleware = exports.createApiLoggerModule = exports.createApiLoggerMiddleware = exports.ApiLogger = exports.apiLoggerExpress = void 0;
+exports.createAxiosLogger = exports.StandaloneApiLogger = exports.ApiLoggerModule = exports.ApiLoggerNestMiddleware = exports.createApiLoggerModule = exports.createApiLoggerMiddleware = exports.ApiLogger = exports.apiLoggerExpress = void 0;
 var express_1 = require("./middleware/express");
 Object.defineProperty(exports, "apiLoggerExpress", { enumerable: true, get: function () { return express_1.apiLoggerExpress; } });
 var logger_1 = require("./core/logger");
@@ -25,4 +25,7 @@ Object.defineProperty(exports, "createApiLoggerMiddleware", { enumerable: true, 
 Object.defineProperty(exports, "createApiLoggerModule", { enumerable: true, get: function () { return nestjs_1.createApiLoggerModule; } });
 Object.defineProperty(exports, "ApiLoggerNestMiddleware", { enumerable: true, get: function () { return nestjs_1.ApiLoggerNestMiddleware; } });
 Object.defineProperty(exports, "ApiLoggerModule", { enumerable: true, get: function () { return nestjs_1.ApiLoggerModule; } });
+var standalone_1 = require("./utils/standalone");
+Object.defineProperty(exports, "StandaloneApiLogger", { enumerable: true, get: function () { return standalone_1.StandaloneApiLogger; } });
+Object.defineProperty(exports, "createAxiosLogger", { enumerable: true, get: function () { return standalone_1.createAxiosLogger; } });
 //# sourceMappingURL=index.js.map
