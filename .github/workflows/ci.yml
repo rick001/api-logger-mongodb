@@ -32,6 +32,7 @@ jobs:
         run: npm ci
 
       - name: Lint
+        if: matrix.node-version != '16.x'
         run: npm run lint --if-present
 
       - name: Build
