@@ -4,7 +4,7 @@
 [![npm downloads](https://img.shields.io/npm/dm/api-logger-mongodb.svg)](https://www.npmjs.com/package/api-logger-mongodb)
 [![License: MIT](https://img.shields.io/npm/l/api-logger-mongodb.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/node/v/api-logger-mongodb.svg)](https://nodejs.org/)
-[![CI](https://github.com/rick001/api-logger-mongodb/actions/workflows/ci.yml/badge.svg)](https://github.com/rick001/api-logger-mongodb/actions/workflows/ci.yml)
+[![CI](https://github.com/rick001/api-logger-mongodb/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/rick001/api-logger-mongodb/actions/workflows/ci.yml?query=branch%3Amain)
 [![TypeScript](https://img.shields.io/badge/Built%20with-TypeScript-3178c6.svg)](https://www.typescriptlang.org/)
 
 Middleware that logs your API requests and responses to MongoDB—for Express, NestJS, or standalone outbound calls (e.g. axios). One config, optional masking and filtering, TypeScript-ready.
