@@ -35,7 +35,7 @@ export function apiLoggerExpress(options: ApiLoggerOptions) {
     const startTime = Date.now();
 
     // Capture response body
-    let oldSend = res.send;
+    const oldSend = res.send;
     let responseBody: any;
     (res as any).body = undefined;
     res.send = function (body?: any): Response {

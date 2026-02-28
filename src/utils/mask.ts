@@ -20,7 +20,7 @@ function deepClone(obj: any): any {
   
   const cloned: any = {};
   for (const key in obj) {
-    if (obj.hasOwnProperty(key)) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
       cloned[key] = deepClone(obj[key]);
     }
   }
@@ -43,14 +43,14 @@ function maskSensitiveData(obj: any, maskFields: string[]): any {
   }
   
   for (const field of maskFields) {
-    if (masked.hasOwnProperty(field)) {
+    if (Object.prototype.hasOwnProperty.call(masked, field)) {
       masked[field] = '***MASKED***';
     }
   }
   
   // Recursively mask nested objects
   for (const key in masked) {
-    if (masked.hasOwnProperty(key) && typeof masked[key] === 'object' && masked[key] !== null) {
+    if (Object.prototype.hasOwnProperty.call(masked, key) && typeof masked[key] === 'object' && masked[key] !== null) {
       masked[key] = maskSensitiveData(masked[key], maskFields);
     }
   }
