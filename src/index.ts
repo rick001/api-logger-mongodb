@@ -8,3 +8,6 @@ export {
   ApiLoggerModule 
 } from './middleware/nestjs';
 export { StandaloneApiLogger, createAxiosLogger } from './utils/standalone'; 
+export { WafEngine } from './waf/engine';
+export { getManagedRules } from './waf/managed-rules';
+export { normalizeLoggerOptions, normalizeWafOptions, validateLoggerOptions } from './waf/config';

@@ -1,6 +1,7 @@
 /**
  * Utility functions for masking sensitive data
  */
+import { ApiLoggerOptions } from '../types';
 
 /**
  * Deep clone an object
@@ -31,57 +32,128 @@ function deepClone(obj: any): any {
 /**
  * Recursively mask sensitive fields in an object
  */
-function maskSensitiveData(obj: any, maskFields: string[]): any {
+function normalizeValue(value: string, caseSensitive: boolean): string {
+  return caseSensitive ? value : value.toLowerCase();
+}
+
+function matchPathOrKey(
+  key: string,
+  path: string,
+  matcher: string,
+  caseSensitive: boolean
+): boolean {
+  const normalizedMatcher = normalizeValue(matcher, caseSensitive);
+  const normalizedKey = normalizeValue(key, caseSensitive);
+  const normalizedPath = normalizeValue(path, caseSensitive);
+
+  return normalizedMatcher === normalizedKey || normalizedMatcher === normalizedPath;
+}
+
+function shouldAllow(
+  key: string,
+  path: string,
+  allowList: string[],
+  caseSensitive: boolean
+): boolean {
+  return allowList.some((item) => matchPathOrKey(key, path, item, caseSensitive));
+}
+
+function shouldMaskKey(
+  key: string,
+  path: string,
+  options: Pick<
+    ApiLoggerOptions,
+    'maskFields' | 'maskFieldPatterns' | 'maskAllowList' | 'maskCaseSensitive'
+  >
+): boolean {
+  const caseSensitive = options.maskCaseSensitive === true;
+  const maskFields = options.maskFields || [];
+  const allowList = options.maskAllowList || [];
+  const patterns = options.maskFieldPatterns || [];
+
+  if (shouldAllow(key, path, allowList, caseSensitive)) {
+    return false;
+  }
+
+  if (maskFields.some((field) => matchPathOrKey(key, path, field, caseSensitive))) {
+    return true;
+  }
+
+  return patterns.some((pattern) => pattern.test(path) || pattern.test(key));
+}
+
+function maskSensitiveData(
+  obj: any,
+  options: Pick<
+    ApiLoggerOptions,
+    'maskFields' | 'maskFieldPatterns' | 'maskAllowList' | 'maskCaseSensitive' | 'maskValue'
+  >,
+  parentPath = ''
+): any {
   if (!obj || typeof obj !== 'object') {
     return obj;
   }
-  
+
   const masked = deepClone(obj);
-  
+  const replacement = options.maskValue || '***MASKED***';
+
   if (Array.isArray(masked)) {
-    return masked.map(item => maskSensitiveData(item, maskFields));
+    return masked.map((item, index) =>
+      maskSensitiveData(item, options, `${parentPath}[${index}]`)
+    );
   }
-  
-  for (const field of maskFields) {
-    if (masked.hasOwnProperty(field)) {
-      masked[field] = '***MASKED***';
-    }
-  }
-  
-  // Recursively mask nested objects
+
   for (const key in masked) {
-    if (masked.hasOwnProperty(key) && typeof masked[key] === 'object' && masked[key] !== null) {
-      masked[key] = maskSensitiveData(masked[key], maskFields);
+    if (!Object.prototype.hasOwnProperty.call(masked, key)) {
+      continue;
+    }
+
+    const path = parentPath ? `${parentPath}.${key}` : key;
+    if (shouldMaskKey(key, path, options)) {
+      masked[key] = replacement;
+      continue;
+    }
+
+    if (typeof masked[key] === 'object' && masked[key] !== null) {
+      masked[key] = maskSensitiveData(masked[key], options, path);
     }
   }
-  
+
   return masked;
 }
 
 /**
  * Mask sensitive data in request/response objects
  */
-export function maskRequestData(req: any, maskFields: string[]): any {
-  if (!maskFields || maskFields.length === 0) {
+export function maskRequestData(
+  req: any,
+  options: Pick<
+    ApiLoggerOptions,
+    'maskFields' | 'maskFieldPatterns' | 'maskAllowList' | 'maskCaseSensitive' | 'maskValue'
+  >
+): any {
+  const hasFields = !!options.maskFields && options.maskFields.length > 0;
+  const hasPatterns = !!options.maskFieldPatterns && options.maskFieldPatterns.length > 0;
+  if (!hasFields && !hasPatterns) {
     return req;
   }
   
   const masked: any = {};
   
   if (req.body) {
-    masked.body = maskSensitiveData(req.body, maskFields);
+    masked.body = maskSensitiveData(req.body, options, 'body');
   }
   
   if (req.query) {
-    masked.query = maskSensitiveData(req.query, maskFields);
+    masked.query = maskSensitiveData(req.query, options, 'query');
   }
   
   if (req.params) {
-    masked.params = maskSensitiveData(req.params, maskFields);
+    masked.params = maskSensitiveData(req.params, options, 'params');
   }
   
   if (req.headers) {
-    masked.headers = maskSensitiveData(req.headers, maskFields);
+    masked.headers = maskSensitiveData(req.headers, options, 'headers');
   }
   
   return masked;
@@ -90,12 +162,20 @@ export function maskRequestData(req: any, maskFields: string[]): any {
 /**
  * Mask sensitive data in response body
  */
-export function maskResponseData(res: any, maskFields: string[]): any {
-  if (!maskFields || maskFields.length === 0 || !res) {
+export function maskResponseData(
+  res: any,
+  options: Pick<
+    ApiLoggerOptions,
+    'maskFields' | 'maskFieldPatterns' | 'maskAllowList' | 'maskCaseSensitive' | 'maskValue'
+  >
+): any {
+  const hasFields = !!options.maskFields && options.maskFields.length > 0;
+  const hasPatterns = !!options.maskFieldPatterns && options.maskFieldPatterns.length > 0;
+  if ((!hasFields && !hasPatterns) || !res) {
     return res;
   }
   
-  return maskSensitiveData(res, maskFields);
+  return maskSensitiveData(res, options, 'response');
 }
 
 /**

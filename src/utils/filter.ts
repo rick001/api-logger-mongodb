@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ApiLoggerOptions } from '../types';
+import { ApiLogEntry, ApiLoggerOptions } from '../types';
 
 /**
  * Check if a request should be logged based on configuration
@@ -53,6 +53,53 @@ export function shouldLogRequest(
 
   if (options.excludeRoutes && options.excludeRoutes.length > 0) {
     const shouldExclude = options.excludeRoutes.some(pattern => pattern.test(url));
+    if (shouldExclude) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Check if a standalone log entry should be logged based on configuration
+ */
+export function shouldLogEntry(entry: ApiLogEntry, options: ApiLoggerOptions): boolean {
+  if (options.shouldLogEntry && !options.shouldLogEntry(entry)) {
+    return false;
+  }
+
+  if (options.logErrorsOnly && entry.response.statusCode < 400) {
+    return false;
+  }
+
+  if (options.minStatusCode !== undefined && entry.response.statusCode < options.minStatusCode) {
+    return false;
+  }
+
+  if (options.maxStatusCode !== undefined && entry.response.statusCode > options.maxStatusCode) {
+    return false;
+  }
+
+  const method = entry.method.toUpperCase();
+  if (options.includeMethods && options.includeMethods.length > 0 && !options.includeMethods.includes(method)) {
+    return false;
+  }
+
+  if (options.excludeMethods && options.excludeMethods.length > 0 && options.excludeMethods.includes(method)) {
+    return false;
+  }
+
+  const url = entry.url;
+  if (options.includeRoutes && options.includeRoutes.length > 0) {
+    const shouldInclude = options.includeRoutes.some((pattern) => pattern.test(url));
+    if (!shouldInclude) {
+      return false;
+    }
+  }
+
+  if (options.excludeRoutes && options.excludeRoutes.length > 0) {
+    const shouldExclude = options.excludeRoutes.some((pattern) => pattern.test(url));
     if (shouldExclude) {
       return false;
     }

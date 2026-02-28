@@ -8,16 +8,23 @@ const logger_1 = require("../core/logger");
  */
 class StandaloneApiLogger {
     constructor(options) {
-        this.initialized = false;
+        this.initPromise = null;
         this.logger = new logger_1.ApiLogger(options);
     }
     /**
      * Initialize MongoDB connection
      */
     async init() {
-        if (!this.initialized) {
-            await this.logger.init();
-            this.initialized = true;
+        if (this.initPromise) {
+            await this.initPromise;
+            return;
+        }
+        this.initPromise = this.logger.init();
+        try {
+            await this.initPromise;
+        }
+        finally {
+            this.initPromise = null;
         }
     }
     /**
@@ -44,11 +51,7 @@ class StandaloneApiLogger {
             ip: undefined,
             userAgent: undefined
         };
-        // Use the logger's collection directly
-        const collection = this.logger.getCollection();
-        if (collection) {
-            await collection.insertOne(logEntry);
-        }
+        await this.logger.logEntry(logEntry);
     }
     /**
      * Close MongoDB connection
@@ -74,7 +77,8 @@ function createAxiosLogger(logger, getUserInfo) {
             return config;
         },
         response: async (response) => {
-            const durationMs = Date.now() - response.config.metadata.startTime;
+            const startTime = response?.config?.metadata?.startTime || Date.now();
+            const durationMs = Date.now() - startTime;
             await logger.logRequest(response.config.url, response.config.method, {
                 headers: response.config.headers,
                 body: response.config.data,
@@ -88,7 +92,8 @@ function createAxiosLogger(logger, getUserInfo) {
         },
         error: async (error) => {
             if (error.response) {
-                const durationMs = Date.now() - error.config.metadata.startTime;
+                const startTime = error?.config?.metadata?.startTime || Date.now();
+                const durationMs = Date.now() - startTime;
                 await logger.logRequest(error.config.url, error.config.method, {
                     headers: error.config.headers,
                     body: error.config.data,

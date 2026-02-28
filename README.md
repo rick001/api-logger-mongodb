@@ -3,15 +3,19 @@
 A comprehensive API logging middleware for Node.js applications (Express, NestJS, etc.) that logs requests and responses to MongoDB for auditing and debugging.
 
 ## Features
-- ✅ Logs API URL, method, request/response data, status, user info, timestamps, and duration
-- ✅ Mask sensitive fields (e.g., password, token)
-- ✅ Configurable via options (MongoDB URI, collection, etc.)
-- ✅ Express middleware support
-- ✅ NestJS middleware support
-- ✅ TypeScript support
-- ✅ Filter by routes, methods, status codes
-- ✅ Custom user info extraction
-- ✅ Response body logging (configurable)
+-  Logs API URL, method, request/response data, status, user info, timestamps, and duration
+-  Mask sensitive fields (e.g., password, token)
+-  In-process WAF detection with managed rules (SQLi, XSS, path traversal, command injection, protocol anomalies)
+-  Soft-block and block modes with score thresholds
+-  Optional in-memory rate limiting and abuse controls
+-  WAF decision metadata stored with request audit logs
+-  Configurable via options (MongoDB URI, collection, etc.)
+-  Express middleware support
+-  NestJS middleware support
+-  TypeScript support
+-  Filter by routes, methods, status codes
+-  Custom user info extraction
+-  Response body logging (configurable)
 
 ## Installation
 
@@ -54,6 +58,28 @@ app.get('/api/users', (req, res) => {
 
 app.listen(3000);
 ```
+
+## Example Folder
+
+A runnable Express WAF demo is included at `example/express-waf`.
+A runnable outbound Axios security demo is included at `example/standalone-axios-waf`.
+
+```bash
+npm run build
+node example/express-waf/server.js
+node example/standalone-axios-waf/client.js
+```
+
+Or run them via npm scripts:
+
+```bash
+npm run example:express
+npm run example:axios
+```
+
+See:
+- `example/express-waf/README.md`
+- `example/standalone-axios-waf/README.md`
 
 ### NestJS
 ```ts
@@ -146,6 +172,92 @@ await logger.close();
 
 ## Advanced Usage Examples
 
+### WAF (Soft-Block Rollout)
+```ts
+app.use(apiLoggerExpress({
+  mongoUri: 'mongodb://localhost:27017',
+  databaseName: 'security_logs',
+  collectionName: 'api_audit',
+  // Keep masking defaults and avoid false positives for known safe fields
+  maskAllowList: ['body.user.email', 'query.email'],
+  // Enable WAF
+  waf: {
+    enabled: true,
+    mode: 'soft-block', // detect | soft-block | block
+    failOpen: true,
+    scoreThresholds: {
+      log: 15,
+      softBlock: 50,
+      block: 80
+    },
+    rateLimit: {
+      enabled: true,
+      windowMs: 60_000,
+      maxRequests: 120,
+      blockDurationMs: 60_000,
+      statusCode: 429
+    },
+    blockedResponseBody: {
+      error: 'Request blocked by security policy'
+    }
+  },
+  // Async persistence recommended for high traffic
+  persistenceMode: 'async',
+  batchSize: 200,
+  flushIntervalMs: 500
+}));
+```
+
+### Standalone Axios (Outbound Security + Audit Logging)
+```ts
+import axios from 'axios';
+import {
+  StandaloneApiLogger,
+  createAxiosLogger,
+  normalizeLoggerOptions
+} from 'api-logger-mongodb';
+
+const logger = new StandaloneApiLogger(
+  normalizeLoggerOptions({
+    mongoUri: 'mongodb://localhost:27017',
+    databaseName: 'security_logs',
+    collectionName: 'outbound_audit'
+  })
+);
+await logger.init();
+
+const axiosLogger = createAxiosLogger(logger);
+axios.interceptors.request.use(axiosLogger.request);
+axios.interceptors.response.use(axiosLogger.response, axiosLogger.error);
+```
+
+### New WAF Utility Exports
+
+The latest version also exports helper utilities:
+
+```ts
+import {
+  getManagedRules,
+  normalizeWafOptions,
+  normalizeLoggerOptions,
+  validateLoggerOptions,
+  WafEngine
+} from 'api-logger-mongodb';
+
+const waf = normalizeWafOptions({
+  enabled: true,
+  mode: 'soft-block',
+  rules: getManagedRules({ includeCategories: ['sqli', 'xss'] })
+});
+
+const options = normalizeLoggerOptions({
+  mongoUri: 'mongodb://localhost:27017',
+  waf
+});
+
+validateLoggerOptions(options);
+```
+
 ### Express - Filter by Routes and Methods
 ```ts
 app.use(apiLoggerExpress({
@@ -225,6 +337,41 @@ getUserInfo: (req) => {
 | logErrorsOnly     | boolean        | Only log errors (status >= 400) |
 | shouldLog         | function       | Custom function to decide logging |
 | transformLog      | function       | Transform log entry before saving |
+| persistenceMode   | `sync` \| `async` | Log write strategy (default: `sync`) |
+| batchSize         | number         | Async write batch size (default: 100) |
+| flushIntervalMs   | number         | Async write flush interval ms (default: 500) |
+| maxQueueSize      | number         | Async write queue cap (default: 1000) |
+| waf               | object         | WAF options (mode, rules, thresholds, rate limiting, callbacks) |
+
+### WAF Options (high-level)
+| Option | Type | Description |
+|--------|------|-------------|
+| `waf.enabled` | boolean | Enables WAF evaluation pipeline |
+| `waf.mode` | `detect` \| `soft-block` \| `block` | Enforcement mode |
+| `waf.failOpen` | boolean | Allow requests on evaluation errors when true |
+| `waf.statusCode` | number | HTTP status for blocked requests |
+| `waf.scoreThresholds` | object | `log`, `softBlock`, `block` risk thresholds |
+| `waf.rules` | `WafRule[]` | Custom rule definitions with regex targets |
+| `waf.rateLimit` | object | Windowed per-key in-memory rate limiting |
+| `waf.routeOverrides` | array | Route-level mode/threshold overrides |
+| `waf.sizeLimits` | object | Inspection/truncation limits for headers/body/query/params |
+
+### Masking Options (false-positive control)
+| Option | Type | Description |
+|--------|------|-------------|
+| `maskFields` | `string[]` | Exact key/path fields to mask |
+| `maskFieldPatterns` | `RegExp[]` | Regex match for key/path masking |
+| `maskAllowList` | `string[]` | Key/path exceptions that should not be masked |
+| `maskCaseSensitive` | `boolean` | Case-sensitive matching for mask rules |
+| `maskValue` | `string` | Replacement value for masked fields |
+
+## Production Rollout Checklist
+1. Start with `waf.mode: 'detect'` for at least one traffic cycle.
+2. Review `waf.matches`, `waf.score`, and route-level false positives in MongoDB.
+3. Add `maskAllowList` and route overrides for known-safe flows (auth/profile updates).
+4. Move to `soft-block` with conservative thresholds.
+5. Enable `block` only after monitored tuning, with incident rollback plan.
+6. Track `Retry-After` behavior and client handling for rate-limited responses.
 
 ## Log Schema Example
 ```json

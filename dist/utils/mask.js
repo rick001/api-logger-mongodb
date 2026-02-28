@@ -1,7 +1,4 @@
 "use strict";
-/**
- * Utility functions for masking sensitive data
- */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DEFAULT_MASK_FIELDS = void 0;
 exports.maskRequestData = maskRequestData;
@@ -30,23 +27,51 @@ function deepClone(obj) {
 /**
  * Recursively mask sensitive fields in an object
  */
-function maskSensitiveData(obj, maskFields) {
+function normalizeValue(value, caseSensitive) {
+    return caseSensitive ? value : value.toLowerCase();
+}
+function matchPathOrKey(key, path, matcher, caseSensitive) {
+    const normalizedMatcher = normalizeValue(matcher, caseSensitive);
+    const normalizedKey = normalizeValue(key, caseSensitive);
+    const normalizedPath = normalizeValue(path, caseSensitive);
+    return normalizedMatcher === normalizedKey || normalizedMatcher === normalizedPath;
+}
+function shouldAllow(key, path, allowList, caseSensitive) {
+    return allowList.some((item) => matchPathOrKey(key, path, item, caseSensitive));
+}
+function shouldMaskKey(key, path, options) {
+    const caseSensitive = options.maskCaseSensitive === true;
+    const maskFields = options.maskFields || [];
+    const allowList = options.maskAllowList || [];
+    const patterns = options.maskFieldPatterns || [];
+    if (shouldAllow(key, path, allowList, caseSensitive)) {
+        return false;
+    }
+    if (maskFields.some((field) => matchPathOrKey(key, path, field, caseSensitive))) {
+        return true;
+    }
+    return patterns.some((pattern) => pattern.test(path) || pattern.test(key));
+}
+function maskSensitiveData(obj, options, parentPath = '') {
     if (!obj || typeof obj !== 'object') {
         return obj;
     }
     const masked = deepClone(obj);
+    const replacement = options.maskValue || '***MASKED***';
     if (Array.isArray(masked)) {
-        return masked.map(item => maskSensitiveData(item, maskFields));
+        return masked.map((item, index) => maskSensitiveData(item, options, `${parentPath}[${index}]`));
     }
-    for (const field of maskFields) {
-        if (masked.hasOwnProperty(field)) {
-            masked[field] = '***MASKED***';
-        }
-    }
-    // Recursively mask nested objects
     for (const key in masked) {
-        if (masked.hasOwnProperty(key) && typeof masked[key] === 'object' && masked[key] !== null) {
-            masked[key] = maskSensitiveData(masked[key], maskFields);
+        if (!Object.prototype.hasOwnProperty.call(masked, key)) {
+            continue;
+        }
+        const path = parentPath ? `${parentPath}.${key}` : key;
+        if (shouldMaskKey(key, path, options)) {
+            masked[key] = replacement;
+            continue;
+        }
+        if (typeof masked[key] === 'object' && masked[key] !== null) {
+            masked[key] = maskSensitiveData(masked[key], options, path);
         }
     }
     return masked;
@@ -54,33 +79,37 @@ function maskSensitiveData(obj, maskFields) {
 /**
  * Mask sensitive data in request/response objects
  */
-function maskRequestData(req, maskFields) {
-    if (!maskFields || maskFields.length === 0) {
+function maskRequestData(req, options) {
+    const hasFields = !!options.maskFields && options.maskFields.length > 0;
+    const hasPatterns = !!options.maskFieldPatterns && options.maskFieldPatterns.length > 0;
+    if (!hasFields && !hasPatterns) {
         return req;
     }
     const masked = {};
     if (req.body) {
-        masked.body = maskSensitiveData(req.body, maskFields);
+        masked.body = maskSensitiveData(req.body, options, 'body');
     }
     if (req.query) {
-        masked.query = maskSensitiveData(req.query, maskFields);
+        masked.query = maskSensitiveData(req.query, options, 'query');
     }
     if (req.params) {
-        masked.params = maskSensitiveData(req.params, maskFields);
+        masked.params = maskSensitiveData(req.params, options, 'params');
     }
     if (req.headers) {
-        masked.headers = maskSensitiveData(req.headers, maskFields);
+        masked.headers = maskSensitiveData(req.headers, options, 'headers');
     }
     return masked;
 }
 /**
  * Mask sensitive data in response body
  */
-function maskResponseData(res, maskFields) {
-    if (!maskFields || maskFields.length === 0 || !res) {
+function maskResponseData(res, options) {
+    const hasFields = !!options.maskFields && options.maskFields.length > 0;
+    const hasPatterns = !!options.maskFieldPatterns && options.maskFieldPatterns.length > 0;
+    if ((!hasFields && !hasPatterns) || !res) {
         return res;
     }
-    return maskSensitiveData(res, maskFields);
+    return maskSensitiveData(res, options, 'response');
 }
 /**
  * Default sensitive fields to mask

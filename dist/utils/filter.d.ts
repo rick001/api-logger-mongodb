@@ -1,9 +1,13 @@
 import { Request, Response } from 'express';
-import { ApiLoggerOptions } from '../types';
+import { ApiLogEntry, ApiLoggerOptions } from '../types';
 /**
  * Check if a request should be logged based on configuration
  */
 export declare function shouldLogRequest(req: Request, res: Response, options: ApiLoggerOptions): boolean;
+/**
+ * Check if a standalone log entry should be logged based on configuration
+ */
+export declare function shouldLogEntry(entry: ApiLogEntry, options: ApiLoggerOptions): boolean;
 /**
  * Extract user information from request
  */

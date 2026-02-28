@@ -14,7 +14,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createAxiosLogger = exports.StandaloneApiLogger = exports.ApiLoggerModule = exports.ApiLoggerNestMiddleware = exports.createApiLoggerModule = exports.createApiLoggerMiddleware = exports.ApiLogger = exports.apiLoggerExpress = void 0;
+exports.validateLoggerOptions = exports.normalizeWafOptions = exports.normalizeLoggerOptions = exports.getManagedRules = exports.WafEngine = exports.createAxiosLogger = exports.StandaloneApiLogger = exports.ApiLoggerModule = exports.ApiLoggerNestMiddleware = exports.createApiLoggerModule = exports.createApiLoggerMiddleware = exports.ApiLogger = exports.apiLoggerExpress = void 0;
 var express_1 = require("./middleware/express");
 Object.defineProperty(exports, "apiLoggerExpress", { enumerable: true, get: function () { return express_1.apiLoggerExpress; } });
 var logger_1 = require("./core/logger");
@@ -28,4 +28,12 @@ Object.defineProperty(exports, "ApiLoggerModule", { enumerable: true, get: funct
 var standalone_1 = require("./utils/standalone");
 Object.defineProperty(exports, "StandaloneApiLogger", { enumerable: true, get: function () { return standalone_1.StandaloneApiLogger; } });
 Object.defineProperty(exports, "createAxiosLogger", { enumerable: true, get: function () { return standalone_1.createAxiosLogger; } });
+var engine_1 = require("./waf/engine");
+Object.defineProperty(exports, "WafEngine", { enumerable: true, get: function () { return engine_1.WafEngine; } });
+var managed_rules_1 = require("./waf/managed-rules");
+Object.defineProperty(exports, "getManagedRules", { enumerable: true, get: function () { return managed_rules_1.getManagedRules; } });
+var config_1 = require("./waf/config");
+Object.defineProperty(exports, "normalizeLoggerOptions", { enumerable: true, get: function () { return config_1.normalizeLoggerOptions; } });
+Object.defineProperty(exports, "normalizeWafOptions", { enumerable: true, get: function () { return config_1.normalizeWafOptions; } });
+Object.defineProperty(exports, "validateLoggerOptions", { enumerable: true, get: function () { return config_1.validateLoggerOptions; } });
 //# sourceMappingURL=index.js.map

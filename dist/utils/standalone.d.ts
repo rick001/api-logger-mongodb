@@ -5,7 +5,7 @@ import { ApiLoggerOptions } from '../types';
  */
 export declare class StandaloneApiLogger {
     private logger;
-    private initialized;
+    private initPromise;
     constructor(options: ApiLoggerOptions);
     /**
      * Initialize MongoDB connection

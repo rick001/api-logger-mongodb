@@ -1,0 +1,1 @@
+{"version":3,"file":"managed-rules.d.ts","sourceRoot":"","sources":["../../src/waf/managed-rules.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,OAAO,EAAE,MAAM,UAAU,CAAC;AAEnC,MAAM,WAAW,cAAe,SAAQ,OAAO;IAC7C,QAAQ,EAAE,MAAM,CAAC;CAClB;AA2DD,wBAAgB,eAAe,CAAC,OAAO,CAAC,EAAE;IACxC,iBAAiB,CAAC,EAAE,MAAM,EAAE,CAAC;IAC7B,cAAc,CAAC,EAAE,MAAM,EAAE,CAAC;CAC3B,GAAG,OAAO,EAAE,CAgBZ"}

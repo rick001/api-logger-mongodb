@@ -4,7 +4,7 @@ import { ApiLoggerOptions } from '../types';
  * Factory function to create NestJS middleware
  * This avoids direct NestJS dependencies in the package
  */
-export declare function createApiLoggerMiddleware(options: ApiLoggerOptions): (req: Request, res: Response, next: NextFunction) => Promise<void>;
+export declare function createApiLoggerMiddleware(options: ApiLoggerOptions): (req: Request, res: Response, next: NextFunction) => Promise<void | Response<any, Record<string, any>>>;
 /**
  * Factory function to create NestJS module
  */

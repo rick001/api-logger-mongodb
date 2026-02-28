@@ -6,7 +6,7 @@ import { ApiLoggerOptions, ApiLogEntry } from '../types';
  */
 export class StandaloneApiLogger {
   private logger: ApiLogger;
-  private initialized = false;
+  private initPromise: Promise<void> | null = null;
 
   constructor(options: ApiLoggerOptions) {
     this.logger = new ApiLogger(options);
@@ -16,9 +16,16 @@ export class StandaloneApiLogger {
    * Initialize MongoDB connection
    */
   async init(): Promise<void> {
-    if (!this.initialized) {
-      await this.logger.init();
-      this.initialized = true;
+    if (this.initPromise) {
+      await this.initPromise;
+      return;
+    }
+
+    this.initPromise = this.logger.init();
+    try {
+      await this.initPromise;
+    } finally {
+      this.initPromise = null;
     }
   }
 
@@ -64,11 +71,7 @@ export class StandaloneApiLogger {
       userAgent: undefined
     };
 
-    // Use the logger's collection directly
-    const collection = this.logger.getCollection();
-    if (collection) {
-      await collection.insertOne(logEntry);
-    }
+    await this.logger.logEntry(logEntry);
   }
 
   /**
@@ -99,7 +102,8 @@ export function createAxiosLogger(
       return config;
     },
     response: async (response: any) => {
-      const durationMs = Date.now() - response.config.metadata.startTime;
+      const startTime = response?.config?.metadata?.startTime || Date.now();
+      const durationMs = Date.now() - startTime;
       
       await logger.logRequest(
         response.config.url,
@@ -122,7 +126,8 @@ export function createAxiosLogger(
     },
     error: async (error: any) => {
       if (error.response) {
-        const durationMs = Date.now() - error.config.metadata.startTime;
+        const startTime = error?.config?.metadata?.startTime || Date.now();
+        const durationMs = Date.now() - startTime;
         
         await logger.logRequest(
           error.config.url,
