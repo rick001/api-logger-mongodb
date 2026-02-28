@@ -60,7 +60,7 @@
     "typescript": "^5.3.2"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=16.20.1"
   },
   "files": [
     "dist",

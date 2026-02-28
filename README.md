@@ -31,13 +31,13 @@ Types: `ApiLoggerOptions`, `ApiLogEntry`, `ApiLoggerInstance` (and others from `
 
 ## Installation
 
-Requires **Node.js >= 16**. Install from npm (when published) or from GitHub:
+Requires **Node.js 16.20.1 or later** (same as the [MongoDB Node driver](https://www.npmjs.com/package/mongodb)). Install from [npm](https://www.npmjs.com/package/api-logger-mongodb):
 
 ```bash
 npm install api-logger-mongodb
 ```
 
-Or from GitHub:
+Or install from GitHub:
 
 ```bash
 npm install git+https://github.com/rick001/api-logger-mongodb.git
