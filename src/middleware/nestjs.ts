@@ -9,16 +9,30 @@ import { ApiLoggerOptions } from '../types';
 export function createApiLoggerMiddleware(options: ApiLoggerOptions) {
   const logger = new ApiLogger(options);
   let initialized = false;
+  let initPromise: Promise<void> | null = null;
 
-  const ensureInit = async () => {
-    if (!initialized) {
-      await logger.init();
+  const ensureInit = async (): Promise<void> => {
+    if (initialized) return;
+    if (initPromise) {
+      await initPromise;
+      return;
+    }
+    initPromise = logger.init();
+    try {
+      await initPromise;
       initialized = true;
+    } finally {
+      initPromise = null;
     }
   };
 
   return async (req: Request, res: Response, next: NextFunction) => {
-    await ensureInit();
+    try {
+      await ensureInit();
+    } catch (err) {
+      console.error('API Logger middleware init failed:', err);
+      return next();
+    }
     const startTime = Date.now();
 
     // Patch res.send to capture response body

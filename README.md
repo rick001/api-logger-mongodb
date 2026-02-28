@@ -3,15 +3,31 @@
 A comprehensive API logging middleware for Node.js applications (Express, NestJS, etc.) that logs requests and responses to MongoDB for auditing and debugging.
 
 ## Features
-- ✅ Logs API URL, method, request/response data, status, user info, timestamps, and duration
-- ✅ Mask sensitive fields (e.g., password, token)
-- ✅ Configurable via options (MongoDB URI, collection, etc.)
-- ✅ Express middleware support
-- ✅ NestJS middleware support
-- ✅ TypeScript support
-- ✅ Filter by routes, methods, status codes
-- ✅ Custom user info extraction
-- ✅ Response body logging (configurable)
+-  Logs API URL, method, request/response data, status, user info, timestamps, and duration
+-  Mask sensitive fields (e.g., password, token)
+-  Configurable via options (MongoDB URI, collection, etc.)
+-  Express middleware support
+-  NestJS middleware support
+-  TypeScript support
+-  Filter by routes, methods, status codes
+-  Custom user info extraction
+-  Response body logging (configurable)
+
+## Package exports
+
+| Export | Description |
+|--------|-------------|
+| `apiLoggerExpress(options)` | Express middleware factory |
+| `createApiLoggerMiddleware(options)` | NestJS-compatible middleware factory (use with `app.use()` or `MiddlewareConsumer`) |
+| `createApiLoggerModule(options)` | NestJS module factory (options only) |
+| `StandaloneApiLogger` | Class for logging outbound HTTP requests (e.g. axios) |
+| `createAxiosLogger(logger, getUserInfo?)` | Axios request/response/error interceptor factory for `StandaloneApiLogger` |
+| `ApiLogger` | Core logger class (used by middleware and standalone) |
+| `validateLoggerOptions(options)` | Validates options; throws if invalid (e.g. missing `mongoUri`) |
+| `DEFAULT_MASK_FIELDS` | Built-in list of field names that are masked when `maskFields` is not set |
+| `ApiLoggerNestMiddleware`, `ApiLoggerModule` | Legacy aliases for NestJS middleware/module factories |
+
+Types: `ApiLoggerOptions`, `ApiLogEntry`, `ApiLoggerInstance` (and others from `./types`).
 
 ## Installation
 
@@ -26,6 +42,18 @@ Or, with yarn:
 ```bash
 yarn add git+https://github.com/rick001/api-logger-mongodb.git
 ```
+
+## Examples
+
+Runnable examples are in the [**example/**](./example) folder:
+
+| Example | Description | How to run (from repo root) |
+|--------|-------------|-----------------------------|
+| [**express**](./example/express) | Express middleware – incoming API requests/responses | `npm run build && node example/express/server.js` |
+| [**nestjs**](./example/nestjs) | NestJS middleware – same in a Nest app | `npm run build` then `cd example/nestjs && npm install && npm run build && npm start` |
+| [**standalone**](./example/standalone) | Standalone axios – outbound HTTP requests | `npm run build` then `cd example/standalone && npm install && npm start` |
+
+See [example/README.md](./example/README.md) and each subfolder’s README for details. MongoDB must be running (e.g. `mongodb://localhost:27017`) or set `MONGO_URI`.
 
 ## Quick Start
 
@@ -56,6 +84,9 @@ app.listen(3000);
 ```
 
 ### NestJS
+
+Apply via `MiddlewareConsumer` (below) or with `app.use(createApiLoggerMiddleware(options))` in your `bootstrap()` (see [example/nestjs](./example/nestjs)).
+
 ```ts
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { createApiLoggerMiddleware } from 'api-logger-mongodb';
@@ -203,13 +234,23 @@ getUserInfo: (req) => {
 }
 ```
 
+## Production considerations
+
+- **Secure default masking:** If you do not set `maskFields`, the logger uses a built-in list of sensitive field names (e.g. `password`, `token`, `authorization`). You can import `DEFAULT_MASK_FIELDS` from the package to inspect or extend it. Pass your own `maskFields` to override.
+- **Fail-open behavior:** If MongoDB connection or middleware initialization fails, the middleware logs the error and calls `next()` so your app keeps running. Requests are not logged until the connection succeeds.
+- **Standalone logging:** `StandaloneApiLogger` and `createAxiosLogger` use the same masking, filtering (`includeRoutes`, `excludeRoutes`, `logErrorsOnly`, etc.), and `transformLog` as the Express/NestJS middleware. Outbound requests are logged through the same pipeline.
+- **Config validation:** Options are validated at construction. Invalid `mongoUri` (missing or blank) throws. You can call `validateLoggerOptions(options)` before creating the logger to fail fast.
+- **Index creation:** If creating indexes on the log collection fails (e.g. permissions), the logger continues without them and logs a warning. Connection and logging still work.
+
+- **Using with a separate WAF:** This package only logs requests; it does not block them. To audit WAF decisions, run your WAF middleware first, then this logger. You can attach WAF outcome to each log entry via `getUserInfo` or `transformLog` (e.g. read from `req` or `res.locals` and add a `waf` field to the entry).
+
 ## Options
 | Option            | Type            | Description |
 |-------------------|----------------|-------------|
 | mongoUri          | string         | MongoDB connection URI (required) |
 | databaseName      | string         | Database name (default: `api_logs`) |
 | collectionName    | string         | Collection name (default: `api_requests`) |
-| maskFields        | string[]       | Fields to mask in logs |
+| maskFields        | string[]       | Fields to mask in logs (default: built-in list; see `DEFAULT_MASK_FIELDS`) |
 | logResponseBody   | boolean        | Log response body (default: true) |
 | logRequestBody    | boolean        | Log request body (default: true) |
 | logHeaders        | boolean        | Log headers (default: true) |
@@ -225,6 +266,9 @@ getUserInfo: (req) => {
 | logErrorsOnly     | boolean        | Only log errors (status >= 400) |
 | shouldLog         | function       | Custom function to decide logging |
 | transformLog      | function       | Transform log entry before saving |
+| shouldLogEntry    | function       | For standalone: custom function to decide if a prebuilt entry is logged |
+
+You can also use the exported `validateLoggerOptions(options)` and `DEFAULT_MASK_FIELDS` from the package.
 
 ## Log Schema Example
 ```json

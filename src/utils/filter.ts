@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ApiLoggerOptions } from '../types';
+import { ApiLogEntry, ApiLoggerOptions } from '../types';
 
 /**
  * Check if a request should be logged based on configuration
@@ -62,6 +62,41 @@ export function shouldLogRequest(
 }
 
 /**
+ * Check if a prebuilt log entry should be logged (for standalone path).
+ */
+export function shouldLogEntry(entry: ApiLogEntry, options: ApiLoggerOptions): boolean {
+  if (options.shouldLogEntry && !options.shouldLogEntry(entry)) {
+    return false;
+  }
+  if (options.logErrorsOnly && entry.response.statusCode < 400) {
+    return false;
+  }
+  if (options.minStatusCode !== undefined && entry.response.statusCode < options.minStatusCode) {
+    return false;
+  }
+  if (options.maxStatusCode !== undefined && entry.response.statusCode > options.maxStatusCode) {
+    return false;
+  }
+  const method = entry.method.toUpperCase();
+  if (options.includeMethods && options.includeMethods.length > 0 && !options.includeMethods.includes(method)) {
+    return false;
+  }
+  if (options.excludeMethods && options.excludeMethods.length > 0 && options.excludeMethods.includes(method)) {
+    return false;
+  }
+  const url = entry.url;
+  if (options.includeRoutes && options.includeRoutes.length > 0) {
+    const shouldInclude = options.includeRoutes.some(pattern => pattern.test(url));
+    if (!shouldInclude) return false;
+  }
+  if (options.excludeRoutes && options.excludeRoutes.length > 0) {
+    const shouldExclude = options.excludeRoutes.some(pattern => pattern.test(url));
+    if (shouldExclude) return false;
+  }
+  return true;
+}
+
+/**
  * Extract user information from request
  */
 export function extractUserInfo(req: Request, getUserInfo?: (req: Request) => any): any {
@@ -104,13 +139,17 @@ export function extractUserInfo(req: Request, getUserInfo?: (req: Request) => an
  * Get client IP address
  */
 export function getClientIP(req: Request): string | undefined {
-  return (
-    req.headers['x-forwarded-for'] as string ||
-    req.headers['x-real-ip'] as string ||
-    req.connection.remoteAddress ||
+  const forwarded = req.headers['x-forwarded-for'];
+  const forwardedStr = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+  const firstForwarded =
+    typeof forwardedStr === 'string' ? (forwardedStr.split(',')[0] ?? '').trim() : forwardedStr;
+  const ip =
+    firstForwarded ||
+    (req.headers['x-real-ip'] as string) ||
+    req.connection?.remoteAddress ||
     (req.socket && req.socket.remoteAddress) ||
-    undefined
-  );
+    undefined;
+  return ip || undefined;
 }
 
 /**

@@ -63,6 +63,8 @@ export interface ApiLoggerOptions {
   shouldLog?: (req: Request, res: Response) => boolean;
   /** Custom function to transform log entry before saving */
   transformLog?: (entry: ApiLogEntry) => ApiLogEntry;
+  /** For standalone logging: custom function to decide if entry should be logged */
+  shouldLogEntry?: (entry: ApiLogEntry) => boolean;
 }
 
 export interface ApiLoggerInstance {

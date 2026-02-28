@@ -8,17 +8,30 @@ import { ApiLoggerOptions } from '../types';
 export function apiLoggerExpress(options: ApiLoggerOptions) {
   const logger = new ApiLogger(options);
   let initialized = false;
+  let initPromise: Promise<void> | null = null;
 
-  // Initialize MongoDB connection once
-  async function ensureInit() {
-    if (!initialized) {
-      await logger.init();
+  async function ensureInit(): Promise<void> {
+    if (initialized) return;
+    if (initPromise) {
+      await initPromise;
+      return;
+    }
+    initPromise = logger.init();
+    try {
+      await initPromise;
       initialized = true;
+    } finally {
+      initPromise = null;
     }
   }
 
   return async function (req: Request, res: Response, next: NextFunction) {
-    await ensureInit();
+    try {
+      await ensureInit();
+    } catch (err) {
+      console.error('API Logger middleware init failed:', err);
+      return next();
+    }
     const startTime = Date.now();
 
     // Capture response body
