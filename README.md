@@ -31,29 +31,50 @@ Types: `ApiLoggerOptions`, `ApiLogEntry`, `ApiLoggerInstance` (and others from `
 
 ## Installation
 
-Install directly from GitHub:
+Requires **Node.js >= 16**. Install from npm (when published) or from GitHub:
+
+```bash
+npm install api-logger-mongodb
+```
+
+Or from GitHub:
 
 ```bash
 npm install git+https://github.com/rick001/api-logger-mongodb.git
 ```
 
-Or, with yarn:
-
-```bash
-yarn add git+https://github.com/rick001/api-logger-mongodb.git
-```
-
 ## Examples
 
-Runnable examples are in the [**example/**](./example) folder:
+Runnable examples are in the [**example/**](./example) folder (in the repo only; not included in the npm package). They show the three ways to use the package:
 
-| Example | Description | How to run (from repo root) |
-|--------|-------------|-----------------------------|
-| [**express**](./example/express) | Express middleware – incoming API requests/responses | `npm run build && node example/express/server.js` |
-| [**nestjs**](./example/nestjs) | NestJS middleware – same in a Nest app | `npm run build` then `cd example/nestjs && npm install && npm run build && npm start` |
-| [**standalone**](./example/standalone) | Standalone axios – outbound HTTP requests | `npm run build` then `cd example/standalone && npm install && npm start` |
+| Example | Description |
+|--------|-------------|
+| [**express**](./example/express) | **Express middleware** – log incoming API requests/responses |
+| [**nestjs**](./example/nestjs) | **NestJS middleware** – same in a Nest app (via `app.use()` or `MiddlewareConsumer`) |
+| [**standalone**](./example/standalone) | **Standalone Axios** – log outbound HTTP requests; no server needed |
 
-See [example/README.md](./example/README.md) and each subfolder’s README for details. MongoDB must be running (e.g. `mongodb://localhost:27017`) or set `MONGO_URI`.
+**Prerequisites:** Build the package from repo root (`npm run build`) and have MongoDB running (e.g. `mongodb://localhost:27017`) or set `MONGO_URI`.
+
+**How to run (from repo root):**
+
+```bash
+# 1. Build the package once
+npm run build
+
+# 2a. Express – no extra install
+node example/express/server.js
+
+# 2b. NestJS – install deps and run from example folder
+cd example/nestjs && npm install && npm run build && npm start
+
+# 2c. Standalone Axios – install deps and run from example folder
+cd example/standalone && npm install && npm start
+```
+
+- **Express** and **NestJS** log **incoming** requests to your server.
+- **Standalone** logs **outbound** requests made by your app (e.g. axios to external APIs).
+
+Full details and sample requests: [example/README.md](./example/README.md) and each subfolder's README.
 
 ## Quick Start
 

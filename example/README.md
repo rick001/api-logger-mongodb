@@ -1,12 +1,12 @@
 # Examples
 
-This folder contains runnable examples for **api-logger-mongodb** in three modes:
+This folder contains runnable examples for **api-logger-mongodb** in three ways:
 
 | Example | Description |
 |--------|-------------|
-| [**express**](./express) | Express middleware – logs incoming API requests/responses to MongoDB |
-| [**nestjs**](./nestjs) | NestJS middleware – same as Express but in a NestJS app |
-| [**standalone**](./standalone) | Standalone axios – logs **outbound** HTTP requests (e.g. axios calls) to MongoDB |
+| [**express**](./express) | **Express middleware** – log incoming API requests/responses to MongoDB |
+| [**nestjs**](./nestjs) | **NestJS middleware** – same in a NestJS app (via `app.use()` or `MiddlewareConsumer`) |
+| [**standalone**](./standalone) | **Standalone Axios** – log **outbound** HTTP requests (e.g. axios) to MongoDB; no server needed |
 
 ## Prerequisites
 
@@ -16,17 +16,20 @@ This folder contains runnable examples for **api-logger-mongodb** in three modes
 ## Quick run
 
 ```bash
-# From repo root
+# 1. Build the package (from repo root)
 npm run build
 
-# Express (no extra install)
+# 2a. Express – no extra install
 node example/express/server.js
 
-# NestJS (install deps in example first)
+# 2b. NestJS – install and run from example folder
 cd example/nestjs && npm install && npm run build && npm start
 
-# Standalone axios (install deps in example first)
+# 2c. Standalone Axios – install and run from example folder
 cd example/standalone && npm install && npm start
 ```
 
-See each subfolder’s README for details.
+- **Express** and **NestJS** log **incoming** requests to your server.
+- **Standalone** logs **outbound** requests made by your app (e.g. axios to external APIs).
+
+See each subfolder’s README for details and sample requests.

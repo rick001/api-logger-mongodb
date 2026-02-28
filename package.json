@@ -4,6 +4,13 @@
   "description": "A comprehensive API logging middleware for Node.js applications that logs requests and responses to MongoDB",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
@@ -35,29 +42,32 @@
   },
   "homepage": "https://github.com/rick001/api-logger-mongodb#readme",
   "dependencies": {
-    "mongodb": "^6.3.0",
-    "express": "^4.22.0"
-  },
-  "devDependencies": {
-    "@types/express": "^4.17.21",
-    "@types/node": "^20.10.0",
-    "@types/jest": "^29.5.8",
-    "@typescript-eslint/eslint-plugin": "^8.56.0",
-    "@typescript-eslint/parser": "^8.56.0",
-    "eslint": "^8.54.0",
-    "jest": "^29.7.0",
-    "ts-jest": "^29.1.1",
-    "typescript": "^5.3.2"
+    "mongodb": "^6.3.0"
   },
   "peerDependencies": {
     "express": ">=4.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.8",
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^8.56.0",
+    "@typescript-eslint/parser": "^8.56.0",
+    "eslint": "^8.54.0",
+    "express": "^4.22.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.3.2"
   },
   "engines": {
     "node": ">=16.0.0"
   },
   "files": [
-    "dist/**/*",
+    "dist",
     "README.md",
     "LICENSE"
-  ]
-} 
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}
